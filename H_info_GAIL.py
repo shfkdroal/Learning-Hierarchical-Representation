@@ -30,11 +30,11 @@ AgentCoord = [0, 0]
 QualityPopupList = []
 
 #Training Param and Variables
-Lam0 = 2
-Lam1 = 1 #.001#0.001 #0 ~ 0.001 for Policy Entropy
-Lam2 = 1
+Lam0 = 1# 2 ->10
+Lam1 = 0.1 #.001#0.001 #0 ~ 0.001 for Policy Entropy
+Lam2 = 0.1
 BatchSize = 1000
-NE = 20
+NE = 10
 IntentionNoiseDim = 4
 IntentionDim1 = 2
 IntentionDim0 = 4
@@ -322,7 +322,7 @@ class GAIL(object):
         self.num_epoch = NE
         self.batch_size = BatchSize #=32
         self.indices = [0]*BatchSize
-        self.log_step = 50
+        self.log_step = 10
         self.visualize_step = 200
         self.code_size = 6432
         self.learning_rate = 8e-6
@@ -408,11 +408,11 @@ class GAIL(object):
 
 
         self.gen_loss_op = 3*Lam0*self._loss1(self.real_label, fake_through_dis) + \
-                           1.5*Lam2*self._loss1(self.intention0_encoded, self.intention0_decoded) \
-                           - 5 *Lam1*Naive_EntropyTerm_policy  \
-                           + 1.5*Lam2*self._loss1(self.intention1_encoded, self.intention1_decoded) + \
-                           1.5*Lam2*self.Entropy(self.intention1_encoded)\
-                           - Lam1*self.Naive_ent_i0
+                           5*Lam2*self._loss1(self.intention0_encoded, self.intention0_decoded) \
+                           - 10 *Lam1*Naive_EntropyTerm_policy  \
+                           + 5*Lam2*self._loss1(self.intention1_encoded, self.intention1_decoded) + \
+                           5*Lam2*self.Entropy(self.intention1_encoded)\
+                           - 5*Lam1*self.Naive_ent_i0
 
         """
                 self.gen_loss_op = 2*Lam0*self._loss1(self.real_label, fake_through_dis) + 
@@ -421,11 +421,17 @@ class GAIL(object):
                            + 5*Lam2*self.Entropy(self.intention1_decoded) + 
                            5*Lam2*self.Entropy(self.intention1_encoded)
                            - 2*Lam1*self.Naive_ent_i0
+                self.gen_loss_op = 3*Lam0*self._loss1(self.real_label, fake_through_dis) + 
+                           5*Lam2*self._loss1(self.intention0_encoded, self.intention0_decoded) 
+                           - 5 *Lam1*Naive_EntropyTerm_policy  
+                           + 5*Lam2*self._loss1(self.intention1_encoded, self.intention1_decoded) + 
+                           1.5*Lam2*self.Entropy(self.intention1_encoded)
+                           - Lam1*self.Naive_ent_i0
         """
 
 
-        optimizer1 = tf.train.RMSPropOptimizer(self.learning_rate/20)
-        optimizer2 = tf.train.RMSPropOptimizer(self.learning_rate/10)
+        optimizer1 = tf.train.RMSPropOptimizer(self.learning_rate/5) #20
+        optimizer2 = tf.train.RMSPropOptimizer(self.learning_rate/5) #10
         # self.dis_train_op = dis_optimizer.minimize(self.dis_loss_op)
         dis_train_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
                                            "dis")
@@ -764,14 +770,14 @@ class GAIL(object):
             plt.xlabel('iterations')
             plt.ylabel('loss')
             #plt.show()
-            plt.savefig('disloss')
+            #plt.savefig('disloss')
 
             plt.plot(gen_losses)
             plt.title('generator loss')
             plt.xlabel('iterations')
             plt.ylabel('loss')
             #plt.show()
-            plt.savefig('genloss')
+            plt.savefig('HGAIL-genloss')
 
 
         print('... Done!')
@@ -1053,11 +1059,6 @@ def get(batch_index):
 
     if k == -1:
         return
-
-    #print("prod coord: ", (ProdCoordList))
-    #print("prod coord len: ", len(ProdCoordList))
-    #print("k: ", k)
-    #print("coord: ", AgentCoord)
 
     scaled121 = 11*ProdCoordList[k][0] + ProdCoordList[k][1]
     CoordList[scaled121] = -1

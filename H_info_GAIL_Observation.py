@@ -566,9 +566,7 @@ feed_sub = graph.get_tensor_by_name("feedState:0")
 
 generate_sample = graph.get_tensor_by_name("GenOut:0")
 
-print("p1")
 spread_product(Num_product_for_each, Num_product_category) #used for loop
-print("p2")
 feed_dict = {noise: currentState, is_training: False, feed_sub: currentState}
 
 actionList = np.array([[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 1, 0], [0, 0, 0, 1, 0, 0], [0, 0, 1, 0, 0, 0],
