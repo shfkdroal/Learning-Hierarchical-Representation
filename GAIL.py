@@ -29,10 +29,12 @@ AgentCoord = [0, 0]
 QualityPopupList = []
 
 # Training Param and Variables
-Lam1 = 1e-2  # .001#0.001 #0 ~ 0.001 for Policy Entropy
-BatchSize = 200
-NE = 5
-UniformNoise = 0  # 0.01#0.3 #Epsilon #Should be locked!
+L0 = 2
+Lam1 = 1e-1  # .001#0.001 #0 ~ 0.001 for Policy Entropy
+BatchSize = 1000
+NE = 30
+UniformNoise = 0.08  # 0.01#0.3 #Epsilon #Should be locked!
+UniformNoise2 = 0.2
 should_shuffle = False  # Should be locked!
 should_randomize_batch = True
 should_depending_on_ExpertStates = False
@@ -313,7 +315,7 @@ class GAIL(object):
         self.log_step = 50
         self.visualize_step = 200
         self.code_size = 6432
-        self.learning_rate = 1e-6 # e4 -> e5
+        self.learning_rate = 8e-6 #1e-6 # e4 -> e5
         self.vis_learning_rate = 1e-6
         self.recon_steps = 100
         self.actmax_steps = 100
@@ -354,15 +356,15 @@ class GAIL(object):
 
         fake_through_dis = self._discriminator(self.generated)
         # self.dis_loss_op = None
-        self.dis_loss_op = self._loss1(self.real_label, self._discriminator(self.real_input)
+        self.dis_loss_op = L0*self._loss1(self.real_label, self._discriminator(self.real_input)
                                        + self._loss1(self.fake_label, fake_through_dis))
         # print(self.fake_samples_op.get_shape())
         Naive_EntropyTerm_policy = self.Entropy(self.fake_samples_op)
 
-        self.gen_loss_op = self._loss1(self.real_label, fake_through_dis) - Lam1 * Naive_EntropyTerm_policy
+        self.gen_loss_op = L0*self._loss1(self.real_label, fake_through_dis) - Lam1 * Naive_EntropyTerm_policy
 
-        optimizer1 = tf.train.RMSPropOptimizer(self.learning_rate/10)
-        optimizer2 = tf.train.RMSPropOptimizer(self.learning_rate)
+        optimizer1 = tf.train.RMSPropOptimizer(self.learning_rate/20)
+        optimizer2 = tf.train.RMSPropOptimizer(self.learning_rate/10)
         # self.dis_train_op = dis_optimizer.minimize(self.dis_loss_op)
         dis_train_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
                                            "dis")
@@ -383,6 +385,7 @@ class GAIL(object):
         # We have multiple instances of the discriminator in the same computation graph,
         # so set variable sharing if this is not the first invocation of this function.
         with tf.variable_scope('dis', reuse=self._dis_called):
+            """
             self._dis_called = True
             input = tf.tanh(input)
             dis_conv1 = conv2d(input, 4, 2, 32, 'conv1')
@@ -396,6 +399,24 @@ class GAIL(object):
             dis_lrelu3 = leaky_relu(dis_batchnorm3)
             print("dis shape", dis_lrelu3.get_shape())
             dis_reshape3 = tf.reshape(dis_lrelu3, [-1, 1024]) #4 -> 28
+            dis_fc4 = fc(dis_reshape3, 1, name='fc5')
+            """
+            self._dis_called = True
+            input = tf.nn.tanh(input)
+            dis_conv1 = conv2d(input, 4, 1, 32, 'conv1')
+            dis_batchnorm1 = batch_norm(dis_conv1, self.is_train)
+            dis_lrelu1 = leaky_relu(dis_batchnorm1)
+            dis_conv2 = conv2d(dis_lrelu1, 4, 1, 64, 'conv2')
+            dis_batchnorm2 = batch_norm(dis_conv2, self.is_train)
+            dis_lrelu2 = leaky_relu(dis_batchnorm2)
+
+            #dis_conv3 = conv2d(dis_lrelu2, 4, 1, 128, 'conv3')
+            #dis_batchnorm3 = batch_norm(dis_conv3, self.is_train)
+            #dis_lrelu3 = leaky_relu(dis_batchnorm3)
+            #print("dis shape", dis_lrelu3.get_shape())
+
+            #shape_rel = dis_lrelu2.get_shape()[0]
+            dis_reshape3 = tf.reshape(dis_lrelu2, [-1, 4*1024]) #2*1024
             dis_fc4 = fc(dis_reshape3, 1, name='fc5')
             return dis_fc4
 
@@ -442,19 +463,35 @@ class GAIL(object):
     def StateUpdateBatch_for_genBuffer(self, v, al, b):
 
         random.seed()
-        comp = np.zeros(v.shape)
+        #comp = np.zeros(v.shape)
 
         for u in range(v.shape[0]):
-            for r in range(v.shape[1]):
-                if np.random.rand(1) < v[u, r, 0, 0]:
-                    comp[u, r, 0, 0] = 1
-                else:
-                    comp[u, r, 0, 0] = 0
-            # print(comp.reshape(ActionDim, 1))
-            dist_2 = np.sum((al - (comp[u, :, :, :]).T) ** 2, axis=1)
-            # dist_2 = tf.reduce_sum((self.actionList - tf.matrix_transpose(v[u, :, :, :])) ** 2, reduction_indices=1)
-            self.indices[b] = np.argmin(dist_2)
-            # print(np.argmin(dist_2))
+            #for r in range(v.shape[1]):
+            #    if np.random.rand(1) < v[u, r, 0, 0]:
+            #        comp[u, r, 0, 0] = 1
+            #    else:
+            #        comp[u, r, 0, 0] = 0
+            idx_comp_max = 0
+            #idx_comp_sec_max = 0
+            idx_comp = 0
+            idx_comp_sec = 0
+            for r in range(v.shape[1] - 1):
+                if idx_comp_max < v[u, r, 0, 0]:
+                    #idx_comp_sec_max = idx_comp_max
+                    idx_comp_max = v[u, r, 0, 0]
+                    idx_comp_sec = idx_comp
+                    idx_comp = r
+            if random.random() < UniformNoise2:
+                idx_comp = idx_comp_sec #np.random.randint(0, 4)
+            elif random.random() < UniformNoise:
+                idx_comp = 5 #np.random.randint(0, 5, size=1)[0] #5
+                #idx_comp = np.random.randint(0, 4)
+
+            #print(comp.reshape(ActionDim, 1))
+            #dist_2 = np.sum((al - (comp[u, :, :, :]).T) ** 2, axis=1)
+            #dist_2 = tf.reduce_sum((self.actionList - tf.matrix_transpose(v[u, :, :, :])) ** 2, reduction_indices=1)
+            self.indices[b] = idx_comp#np.argmin(dist_2)
+            #print(np.argmin(dist_2))
 
         self._generator_nxt_state(self.indices, v.shape[0], b)
 
@@ -624,14 +661,14 @@ class GAIL(object):
             plt.xlabel('iterations')
             plt.ylabel('loss')
             # plt.show()
-            plt.savefig('disloss')
+            #plt.savefig('disloss')
 
             plt.plot(gen_losses)
             plt.title('generator loss')
             plt.xlabel('iterations')
             plt.ylabel('loss')
             # plt.show()
-            plt.savefig('genloss')
+            plt.savefig('GAIL-loss')
 
         print('... Done!')
 
@@ -976,7 +1013,7 @@ with tf.Session() as sess:
         dis_var_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'dis')
         gen_var_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'gen')
         saver = tf.train.Saver(dis_var_list + gen_var_list)
-        saver.save(sess, 'model/gail')
+        saver.save(sess, 'model/Gail/gail')
 
 
 

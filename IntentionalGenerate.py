@@ -10,6 +10,7 @@ import graphic
 import matplotlib.pyplot as plt
 
 
+
 #Game Param
 w = 60
 agentSpeed = 60
@@ -137,10 +138,7 @@ class State:
             note.penup()
             note.setposition(w*productList[colideIdx].xCoord - 270, w*productList[colideIdx].yCoord - 300)
             note.color("white")
-            #print(len(productList))
-            #print(colideIdx)
-            #print(len(ProdCoordList))
-            #print(len(ProductList))
+
             note.write("{}".format(productList[colideIdx].quality_factor))
             QualityPopupList.append(note)
 
@@ -224,7 +222,7 @@ agent.color("pink")
 agent.shape("triangle")
 agent.penup()
 agent.speed(0)
-agent.setposition(-300, -300)
+agent.setposition(0, 0) #-300 -300
 agent.setheading(90)
 
 ###########################
@@ -257,12 +255,78 @@ def xy_rand_generator():
 
 def spread_product(num_product, num_kind):
 
+    """
     for k in range(num_kind):
         for p in range(num_product):
             coords = xy_rand_generator()
             single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
             # coord, kind, index, quality
             ProductList.append(single_product)
+    """
+    k = 0
+    p = 0
+    coords = [3, 7]
+    ProdCoordList.append(coords)
+    single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
+    # coord, kind, index, quality
+    ProductList.append(single_product)
+
+    k = 0
+    p = 1
+    coords = [5, 7]
+    ProdCoordList.append(coords)
+    single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
+    # coord, kind, index, quality
+    ProductList.append(single_product)
+
+    k = 1
+    p = 0
+    coords = [7, 3]
+    ProdCoordList.append(coords)
+    single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
+    # coord, kind, index, quality
+    ProductList.append(single_product)
+
+    k = 1
+    p = 1
+    coords = [5, 3]
+    ProdCoordList.append(coords)
+    single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
+    # coord, kind, index, quality
+    ProductList.append(single_product)
+
+    k = 2
+    p = 0
+    coords = [7, 7]
+    ProdCoordList.append(coords)
+    single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
+    # coord, kind, index, quality
+    ProductList.append(single_product)
+
+    k = 2
+    p = 1
+    coords = [7, 5]
+    ProdCoordList.append(coords)
+    single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
+    # coord, kind, index, quality
+    ProductList.append(single_product)
+
+    k = 3
+    p = 0
+    coords = [3, 3]
+    ProdCoordList.append(coords)
+    single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
+    # coord, kind, index, quality
+    ProductList.append(single_product)
+
+    k = 3
+    p = 1
+    coords = [3, 5]
+    ProdCoordList.append(coords)
+    single_product = Product(coords[0], coords[1], k, p, random.randint(2, 10))
+    # coord, kind, index, quality
+    ProductList.append(single_product)
+
 
     k = 0
     for v in ProductList:
@@ -304,7 +368,6 @@ def collisionTest():
             newK += 1
 
     #wn.delay(200)
-    print("p3")
     state.Update_External_State_1(productList=ProductList, colideIdx=colideIdx)
     return
 
@@ -463,7 +526,7 @@ def cook():
     #clear setting
     agent.penup()
     agent.speed(0)
-    agent.setposition(-300, -300)
+    agent.setposition(0, 0)
     agent.setheading(90)
 
     state.init(x=[], internal=[], num_product=0, coord=[0, 0])
@@ -530,6 +593,23 @@ def get():
     state.Update_External_State_1(productList=ProductList, colideIdx=-2)
     wn.delay(5)
 
+    """
+    ProductList = []
+    ProdCoordList = []
+    CoordList = [0]*121
+    Turtle_objectList = [0]*121
+
+    """
+
+#create keyboard bindings
+
+#wn.onkeypress(move_left, 'Left')
+#wn.onkeypress(move_right, 'Right')
+#wn.onkeypress(move_up, 'Up')
+#wn.onkeypress(move_down, 'Down')
+
+#wn.onkeypress(get, '1')
+#wn.onkeypress(cook, '2')
 
 def set_seed(seed):
     np.random.seed(seed)
@@ -540,15 +620,16 @@ tf.reset_default_graph()
 set_seed(21)
 
 sess = tf.Session()
-saver = tf.train.import_meta_graph('./model/Gail4/gail.meta')
+saver = tf.train.import_meta_graph('./model/H_info_Gail.meta')
 print(saver)
-saver.restore(sess, tf.train.latest_checkpoint('./model/Gail4'))
+saver.restore(sess, tf.train.latest_checkpoint('./model'))
 graph = tf.get_default_graph()
 noise = graph.get_tensor_by_name("noise:0") #tensor
 is_training = graph.get_tensor_by_name("is_training:0")
 feed_sub = graph.get_tensor_by_name("feedState:0")
-#tt = [n.name for n in tf.get_default_graph().as_graph_def().node]
-#tt = [n.name for n in tf.get_default_graph().get_operations()]
+
+#i1_codes = graph.get_tensor_by_name("I1_Enc/I1:0")
+#i0_codes = graph.get_tensor_by_name("I0_Enc/I0:0")
 
 generate_sample = graph.get_tensor_by_name("GenOut:0")
 
@@ -593,6 +674,7 @@ def Execute(v):
 
 def _generator_nxt_state(action_indices):
 
+    print(action_indices)
     for k in range(BatchSize):
         if np.random.rand(1) <= 0.2:
             action_indices[k] = np.random.randint(low=0, high=5, size=1, dtype=int)
@@ -608,74 +690,279 @@ def _generator_nxt_state(action_indices):
         elif action_indices[k] == 4:
             get()
         elif action_indices[k] == 5:
-            #return
-            cook()
+            return
+            #cook()
 
-def Make_agentBehave():
+#t = sess.run(init_intention_init, feed_dict={init_intention_init: })
+#init_intention1, init_intention0
+
+#print("Function Register. . .")
+#wn.onkeypress(Make_agentBehave, 'Left')
+
+#wn.listen()
+#wn.mainloop()
+
+maxTrial = 5
+maxItr = 100
+
+## Intention Experiments
+
+init_intention_init = graph.get_tensor_by_name("int_init:0")
+intention1 = graph.get_tensor_by_name("int1:0")
+intention0 = graph.get_tensor_by_name("int0:0")
+IntentionNoiseDim = 4
+
+# intention 1[size=2] -> intention 0[size=4]
+
+def Make_agentBehave_I0_0():
     global feed_dict
     global currentState
-    feed_dict = {noise: currentState, is_training: False, feed_sub: currentState}
-    print(currentState.shape)
-    print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
-    result = sess.run(generate_sample, feed_dict=feed_dict)
-    action = result[:, 0:ActionDim+2, :, :]
-    print(action.reshape(6, 1))
-    Execute(action)
 
-print("Function Register. . .")
-wn.onkeypress(Make_agentBehave, 'Left')
+    intention0_custom = np.array([1, 0, 0, 0], dtype=float).reshape(1, 4, 1, 1)
 
-wn.listen()
-wn.mainloop()
+    init = tf.global_variables_initializer()
+    sess.run(init)
 
-######################### Auto Rewarding Test Code Line ###############################
-
-maxItr = 500
-
-
-rewards = [] #rewards[-1]
-
-desire = state.Internal_state_Buffer[Maximum_inventory]
-
-def Make_agentBehave2():
-    global feed_dict
-    global currentState
-    feed_dict = {noise: currentState, is_training: False, feed_sub: currentState}
+    #print(np.shape(i1_))
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention0: intention0_custom} #ex: [1, 0]
     #print(currentState.shape)
     #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
-    result = sess.run(generate_sample, feed_dict=feed_dict)
-    action = result[:, 0:ActionDim+2, :, :]
-    #print(action.reshape(6, 1))
-    Execute(action)
-    #Draw Reward Chart Here
+    result, i0, i1 = sess.run([generate_sample, intention0, intention1], feed_dict=feed_dict)
+    print("i1: ", np.reshape(i1, [1, 2]))
+    print("i0: ", np.reshape(i0, [1, 4]))
+    action = result[0][0:ActionDim+2, :, :]
+    print(action.reshape(6, 1))
+    Execute(action.reshape(1, 6, 1, 1))
 
-    plt.plot(rewards)
-    plt.title('discriminator loss')
-    plt.xlabel('iterations')
-    plt.ylabel('loss')
-    # plt.show()
-    plt.savefig('GAIL-reward-500')
+def Make_agentBehave_I0_1():
+    global feed_dict
+    global currentState
+
+    intention0_custom = np.array([0, 1, 0, 0], dtype=float).reshape(1, 4, 1, 1)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    #print(np.shape(i1_))
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention0: intention0_custom} #ex: [1, 0]
+    #print(currentState.shape)
+    #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
+    result, i0, i1 = sess.run([generate_sample, intention0, intention1], feed_dict=feed_dict)
+    print("i1: ", np.reshape(i1, [1, 2]))
+    print("i0: ", np.reshape(i0, [1, 4]))
+    action = result[0][0:ActionDim+2, :, :]
+    print(action.reshape(6, 1))
+    Execute(action.reshape(1, 6, 1, 1))
+
+def Make_agentBehave_I0_2():
+    global feed_dict
+    global currentState
+
+    intention0_custom = np.array([0, 0, 1, 0], dtype=float).reshape(1, 4, 1, 1)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    #print(np.shape(i1_))
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention0: intention0_custom} #ex: [1, 0]
+    #print(currentState.shape)
+    #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
+    result, i0, i1 = sess.run([generate_sample, intention0, intention1], feed_dict=feed_dict)
+    print("i1: ", np.reshape(i1, [1, 2]))
+    print("i0: ", np.reshape(i0, [1, 4]))
+    action = result[0][0:ActionDim+2, :, :]
+    print(action.reshape(6, 1))
+    Execute(action.reshape(1, 6, 1, 1))
+
+def Make_agentBehave_I0_3():
+    global feed_dict
+    global currentState
+
+    intention0_custom = np.array([0, 0, 0, 1], dtype=float).reshape(1, 4, 1, 1)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    #print(np.shape(i1_))
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention0: intention0_custom} #ex: [1, 0]
+    #print(currentState.shape)
+    #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
+    result, i0, i1 = sess.run([generate_sample, intention0, intention1], feed_dict=feed_dict)
+    print("i1: ", np.reshape(i1, [1, 2]))
+    print("i0: ", np.reshape(i0, [1, 4]))
+    action = result[0][0:ActionDim+2, :, :]
+    print(action.reshape(6, 1))
+    Execute(action.reshape(1, 6, 1, 1))
 
 
-#for i in range(maxItr):
-#    Make_agentBehave2()
-#    wn.delay(10)
+
+#for k in range(maxTrial):
+#    desire = state.Internal_state_Buffer[Maximum_inventory]
+#    for i in range(maxItr):
+#        #Make_agentBehave2(k, prodTarget1, prodTarget2, prodTarget_sub1, prodTarget_sub2, desire)
+#        Make_agentBehave2(k)
+#        wn.delay(20)
+#    cook()
+
+
+#init_intention_init = graph.get_tensor_by_name("int_init:0")
+#intention1 = graph.get_tensor_by_name("int1:0")
+#intention0 = graph.get_tensor_by_name("int0:0")
+
+def Make_agentBehave_I1_0():
+    global feed_dict
+    global currentState
+
+    intention1_custom = np.array([1, 0], dtype=float).reshape(1, 2, 1, 1)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    #print(np.shape(i1_))
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention1: intention1_custom} #ex: [1, 0]
+    #print(currentState.shape)
+    i0 = sess.run([intention0], feed_dict=feed_dict)
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention0: np.array(i0, dtype=float).reshape(1, 4, 1, 1), intention1: intention1_custom} #ex: [1, 0]
+    #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
+    result, i1 = sess.run([generate_sample, intention1], feed_dict=feed_dict)
+    print("i1: ", np.reshape(i1, [1, 2]))
+    print("i0: ", np.reshape(i0, [1, 4]))
+    action = result[0][0:ActionDim+2, :, :]
+    print(action.reshape(6, 1))
+    Execute(action.reshape(1, 6, 1, 1))
+
+def Make_agentBehave_I1_1():
+    global feed_dict
+    global currentState
+
+    intention1_custom = np.array([0, 1], dtype=float).reshape(1, 2, 1, 1)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    #print(np.shape(i1_))
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention1: intention1_custom} #ex: [1, 0]
+    #print(currentState.shape)
+    i0 = sess.run([intention0], feed_dict=feed_dict)
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention0: np.array(i0, dtype=float).reshape(1, 4, 1, 1), intention1: intention1_custom} #ex: [1, 0]
+    #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
+    result, i1 = sess.run([generate_sample, intention1], feed_dict=feed_dict)
+    print("i1: ", np.reshape(i1, [1, 2]))
+    print("i0: ", np.reshape(i0, [1, 4]))
+    action = result[0][0:ActionDim+2, :, :]
+    print(action.reshape(6, 1))
+    Execute(action.reshape(1, 6, 1, 1))
+
+print("Function Register. . .")
+
+#wn.onkeypress(Make_agentBehave_I1_0, '1')
+#wn.onkeypress(Make_agentBehave_I1_1, '2')
+
+#wn.onkeypress(Make_agentBehave_I0_0, '3')
+#wn.onkeypress(Make_agentBehave_I0_1, '4')
+#wn.onkeypress(Make_agentBehave_I0_2, '5')
+#wn.onkeypress(Make_agentBehave_I0_3, '6')
+
+
+#wn.listen()
+#wn.mainloop()
 
 
 
+hist_i0_per_i1_0 = []
+hist_i0_per_i1_1 = []
+
+def Make_agentBehave_I1_0_hist():
+    global feed_dict
+    global currentState
+
+    intention1_custom = np.array([1, 0], dtype=float).reshape(1, 2, 1, 1)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    #print(np.shape(i1_))
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention1: intention1_custom} #ex: [1, 0]
+    #print(currentState.shape)
+    i0 = sess.run([intention0], feed_dict=feed_dict)
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention0: np.array(i0, dtype=float).reshape(1, 4, 1, 1), intention1: intention1_custom} #ex: [1, 0]
+    #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
+    result, i1 = sess.run([generate_sample, intention1], feed_dict=feed_dict)
+    print("i1: ", np.reshape(i1, [1, 2]))
+    i0_ = np.reshape(i0, [1, 4])
+    argminI0 = np.argmin(i0_, axis=1)
+    print("i0: ", np.argmin(i0_, axis=1))
+
+    hist_i0_per_i1_1.append(argminI0)
+    plt.hist(hist_i0_per_i1_1, 4, normed=1)
+    plt.savefig('HI_histogram_i1_0')
+
+    action = result[0][0:ActionDim+2, :, :]
+    print(action.reshape(6, 1))
+    Execute(action.reshape(1, 6, 1, 1))
 
 
+def Make_agentBehave_I1_1_hist():
+    global feed_dict
+    global currentState
+
+    intention1_custom = np.array([0, 1], dtype=float).reshape(1, 2, 1, 1)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    #print(np.shape(i1_))
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention1: intention1_custom} #ex: [1, 0]
+    #print(currentState.shape)
+    i0 = sess.run([intention0], feed_dict=feed_dict)
+    feed_dict = {noise: currentState, is_training: False,
+                 feed_sub: currentState, init_intention_init: np.random.normal(0, 1, [1, IntentionNoiseDim, 1, 1]),
+                 intention0: np.array(i0, dtype=float).reshape(1, 4, 1, 1), intention1: intention1_custom} #ex: [1, 0]
+    #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
+    result, i1 = sess.run([generate_sample, intention1], feed_dict=feed_dict)
+    print("i1: ", np.reshape(i1, [1, 2]))
+    i0_ = np.reshape(i0, [1, 4])
+    argminI0 = np.argmin(i0_, axis=1)
+    print("i0: ", np.argmin(i0_, axis=1))
+
+    hist_i0_per_i1_1.append(argminI0)
+    plt.hist(hist_i0_per_i1_1, 4, normed=1)
+    plt.savefig('HI_histogram_i1_1')
+
+    action = result[0][0:ActionDim+2, :, :]
+    print(action.reshape(6, 1))
+    Execute(action.reshape(1, 6, 1, 1))
 
 
+maxTrial = 5
+maxItr = 100
 
 
-
-
-
-
-
-
-
-
-
-
+## i1 == 0 and 1 proceed the each function
+for k in range(maxTrial):
+    for i in range(maxItr):
+        #Make_agentBehave2(k, prodTarget1, prodTarget2, prodTarget_sub1, prodTarget_sub2, desire)
+        wn.delay(20)
+    cook()

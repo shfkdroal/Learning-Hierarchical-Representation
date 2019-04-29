@@ -304,7 +304,6 @@ def collisionTest():
             newK += 1
 
     #wn.delay(200)
-    print("p3")
     state.Update_External_State_1(productList=ProductList, colideIdx=colideIdx)
     return
 
@@ -540,9 +539,9 @@ tf.reset_default_graph()
 set_seed(21)
 
 sess = tf.Session()
-saver = tf.train.import_meta_graph('./model/Gail4/gail.meta')
+saver = tf.train.import_meta_graph('./model/Gail/gail.meta')
 print(saver)
-saver.restore(sess, tf.train.latest_checkpoint('./model/Gail4'))
+saver.restore(sess, tf.train.latest_checkpoint('./model/Gail'))
 graph = tf.get_default_graph()
 noise = graph.get_tensor_by_name("noise:0") #tensor
 is_training = graph.get_tensor_by_name("is_training:0")
@@ -566,8 +565,6 @@ indices = np.zeros(BatchSize)
 def Execute(v):
 
     random.seed()
-    #comp = np.zeros(v.shape)
-
     for u in range(v.shape[0]):
         idx_comp_max = 0
         idx_comp = 0
@@ -611,35 +608,82 @@ def _generator_nxt_state(action_indices):
             #return
             cook()
 
-def Make_agentBehave():
-    global feed_dict
-    global currentState
-    feed_dict = {noise: currentState, is_training: False, feed_sub: currentState}
-    print(currentState.shape)
-    print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
-    result = sess.run(generate_sample, feed_dict=feed_dict)
-    action = result[:, 0:ActionDim+2, :, :]
-    print(action.reshape(6, 1))
-    Execute(action)
-
-print("Function Register. . .")
-wn.onkeypress(Make_agentBehave, 'Left')
-
-wn.listen()
-wn.mainloop()
 
 ######################### Auto Rewarding Test Code Line ###############################
 
-maxItr = 500
-
 
 rewards = [] #rewards[-1]
+rewards_dist = [] #rewards[-1]
+#des 0 : 1 ,2
+#des 1 : 0, 3
 
-desire = state.Internal_state_Buffer[Maximum_inventory]
+def isSame(p1, p2):
+    same = False
+    k1 = p1.kind
+    k2 = p2.kind
+    idx1 = p1.idx_within_kind
+    idx2 = p2.idx_within_kind
+    if k1 == k2 and idx1 == idx2:
+        same = True
+    return same
 
-def Make_agentBehave2():
+RewardFactor = 2
+def calcReward(desire, rewards, prodTarget1, prodTarget2, prodTarget_sub1, prodTarget_sub2):
+    global ProductList
+
+    rewardCalc = 0 #offset
+
+    #panelty = 0 - No panelty for eating other ingr
+
+    count = 0
+    for v in ProductList:
+        if not isSame(v, prodTarget1) and not isSame(v, prodTarget2) and not isSame(v, prodTarget_sub1) \
+                and not isSame(v, prodTarget_sub2):
+            count += 5
+        else:
+            if isSame(v, prodTarget1) or isSame(v, prodTarget2):
+                rewardCalc -= RewardFactor*10  #v.quality_factor
+            elif isSame(v, prodTarget_sub1) or isSame(v, prodTarget_sub2):
+                rewardCalc -= RewardFactor*5  #v.quality_factor/2
+
+    rewardCalc = rewardCalc + count
+    return rewardCalc
+
+
+def calcReward_dist(desire):
+    global ProductList
+    rewardCalc = 0
+
+    isThere = False
+    for v in ProductList:
+        ptype = v.kind
+        x = v.xCoord
+        y = v.yCoord
+        if desire == 0:
+            if ptype == 1 or ptype == 2:
+                rewardCalc += 10/(np.abs(x - AgentCoord[0]) + 1)
+                rewardCalc += 10/(np.abs(y - AgentCoord[1]) + 1)
+                isThere = True
+        elif desire == 1:
+            if ptype == 0 or ptype == 3:
+                rewardCalc += 10/(np.abs(x - AgentCoord[0]) + 1)
+                rewardCalc += 10/(np.abs(y - AgentCoord[1]) + 1)
+                isThere = True
+    if not isThere:
+        rewardCalc  = 10
+    return rewardCalc
+
+
+def Make_agentBehave2(k, prodTarget1, prodTarget2, prodTarget_sub1, prodTarget_sub2, desire):
+
     global feed_dict
     global currentState
+    global rewards_dist
+    global rewards
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
     feed_dict = {noise: currentState, is_training: False, feed_sub: currentState}
     #print(currentState.shape)
     #print(currentState[0, 0:StateDim, :, :].reshape(1, StateDim))
@@ -649,17 +693,73 @@ def Make_agentBehave2():
     Execute(action)
     #Draw Reward Chart Here
 
+    rewards_dist.append(calcReward_dist(desire)) #Not Cumulative
+    rewards.append(calcReward(desire, rewards, prodTarget1, prodTarget2, prodTarget_sub1, prodTarget_sub2)) #Cumulative
+
+    plt.ylim(0, 60)
     plt.plot(rewards)
-    plt.title('discriminator loss')
+    plt.title('reward')
     plt.xlabel('iterations')
-    plt.ylabel('loss')
+    plt.ylabel('reward-get')
+
     # plt.show()
-    plt.savefig('GAIL-reward-500')
+
+    #plt.savefig('GAIL-rewards-500'+str(k))
+
+    plt.plot(rewards_dist)
+    plt.title('reward/reward-distance')
+    plt.xlabel('iterations')
+    plt.ylabel('reward-distance')
+    # plt.show()
+    plt.savefig('GAIL-rewards-dist-500'+str(k))
 
 
-#for i in range(maxItr):
-#    Make_agentBehave2()
-#    wn.delay(10)
+maxTrial = 5
+maxItr = 100
+
+for k in range(maxTrial):
+    desire = state.Internal_state_Buffer[Maximum_inventory]
+
+    prodTarget1 = None
+    prodTarget2 = None
+
+    prodTarget_sub1 = None
+    prodTarget_sub2 = None
+
+    if desire == 0:
+        for v in ProductList:
+            ptype = v.kind
+            if ptype == 1:
+                prodTarget1 = v
+                if prodTarget1.quality_factor <= v.quality_factor:
+                    prodTarget_sub1 = prodTarget1
+                    prodTarget1 = v
+
+            elif ptype == 2:
+                prodTarget2 = v
+                if prodTarget2.quality_factor <= v.quality_factor:
+                    prodTarget_sub2 = prodTarget2
+                    prodTarget2 = v
+
+    elif desire == 1:
+        for v in ProductList:
+            ptype = v.kind
+            if ptype == 0:
+                prodTarget1 = v
+                if prodTarget1.quality_factor <= v.quality_factor:
+                    prodTarget_sub1 = prodTarget1
+                    prodTarget1 = v
+            elif ptype == 3:
+                prodTarget2 = v
+                if prodTarget2.quality_factor <= v.quality_factor:
+                    prodTarget_sub2 = prodTarget2
+                    prodTarget2 = v
+
+
+    for i in range(maxItr):
+        Make_agentBehave2(k, prodTarget1, prodTarget2, prodTarget_sub1, prodTarget_sub2, desire)
+        wn.delay(20)
+    cook()
 
 
 
